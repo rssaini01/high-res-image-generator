@@ -1,0 +1,12 @@
+# Core dependencies
+Pillow>=10.0.0
+numpy>=1.24.0
+
+# Optional: For faster Deep Zoom generation
+pyvips>=2.2.0
+
+# Optional: For progress bars
+tqdm>=4.65.0
+
+# Optional: For advanced image processing
+scipy>=1.10.0

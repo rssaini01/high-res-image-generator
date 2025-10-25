@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Zoom Image Viewer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/openseadragon/4.1.0/openseadragon.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        #viewer {
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+        }
+
+        .controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+
+        .controls h3 {
+            margin-bottom: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            margin: 5px 0;
+            padding: 10px 15px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background: #1976D2;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .info div {
+            margin: 5px 0;
+        }
+
+        .info strong {
+            color: #2196F3;
+        }
+
+        .file-input {
+            margin-top: 10px;
+        }
+
+        .file-input input {
+            display: none;
+        }
+
+        .file-input label {
+            display: block;
+            width: 100%;
+            padding: 10px 15px;
+            background: #4CAF50;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .file-input label:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+<div class="controls">
+    <h3>Controls</h3>
+    <button class="btn" onclick="viewer.viewport.goHome()">🏠 Reset View</button>
+    <button class="btn" onclick="viewer.viewport.zoomBy(2)">➕ Zoom In</button>
+    <button class="btn" onclick="viewer.viewport.zoomBy(0.5)">➖ Zoom Out</button>
+    <button class="btn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
+
+    <div class="file-input">
+        <input type="file" id="dziFile" accept=".dzi" onchange="loadDZI(event)">
+        <label for="dziFile">📁 Load DZI File</label>
+    </div>
+</div>
+
+<div class="info">
+    <div><strong>Zoom:</strong> <span id="zoom">1.00x</span></div>
+    <div><strong>Position:</strong> <span id="position">0, 0</span></div>
+    <div><strong>Instructions:</strong></div>
+    <div>• Mouse wheel to zoom</div>
+    <div>• Click and drag to pan</div>
+    <div>• Double-click to zoom in</div>
+</div>
+
+<div id="viewer"></div>
+
+<script>
+  // Initialize OpenSeadragon viewer
+  const viewer = OpenSeadragon({
+    id: "viewer",
+    prefixUrl: "https://cdnjs.cloudflare.com/ajax/libs/openseadragon/4.1.0/images/",
+
+    // Default tile source (update this path to your generated DZI)
+    tileSources: "output/deepzoom_tiles.dzi",
+
+    // Viewer options
+    animationTime: 0.5,
+    blendTime: 0.1,
+    constrainDuringPan: true,
+    maxZoomPixelRatio: 2,
+    minZoomLevel: 0.5,
+    visibilityRatio: 1,
+    zoomPerScroll: 2,
+    zoomPerClick: 2,
+
+    // UI options
+    showNavigator: true,
+    navigatorPosition: "BOTTOM_RIGHT",
+    showRotationControl: true,
+    showHomeControl: false,
+    showFullPageControl: false,
+    showZoomControl: false,
+
+    // Performance
+    immediateRender: false,
+    maxImageCacheCount: 200,
+  });
+
+  // Update info panel
+  viewer.addHandler('zoom', function(event) {
+    document.getElementById('zoom').textContent = event.zoom.toFixed(2) + 'x';
+  });
+
+  viewer.addHandler('pan', function(event) {
+    const center = viewer.viewport.getCenter();
+    document.getElementById('position').textContent =
+      `${center.x.toFixed(4)}, ${center.y.toFixed(4)}`;
+  });
+
+  viewer.addHandler('open', function() {
+    console.log('✓ Image loaded successfully');
+  });
+
+  viewer.addHandler('open-failed', function(event) {
+    console.error('✗ Failed to load image:', event.message);
+    alert('Failed to load image. Make sure the DZI file path is correct.');
+  });
+
+  // Fullscreen toggle
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  }
+
+  // Load custom DZI file
+  function loadDZI(event) {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const dziPath = URL.createObjectURL(file);
+        viewer.open(dziPath);
+      };
+      reader.readAsText(file);
+    }
+  }
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', function(e) {
+    switch(e.key) {
+      case 'r':
+      case 'R':
+        viewer.viewport.goHome();
+        break;
+      case '+':
+      case '=':
+        viewer.viewport.zoomBy(2);
+        break;
+      case '-':
+      case '_':
+        viewer.viewport.zoomBy(0.5);
+        break;
+      case 'f':
+      case 'F':
+        toggleFullscreen();
+        break;
+    }
+  });
+</script>
+</body>
+</html>
